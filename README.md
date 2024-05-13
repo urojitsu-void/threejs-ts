@@ -22,4 +22,3 @@ $ bun production
 $ bun preview
 ```
 
-
