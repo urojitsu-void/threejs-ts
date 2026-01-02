@@ -17,6 +17,8 @@
   "dependencies": {
     "@tweenjs/tween.js": "^23.1.1",
     "ammojs-typed": "^1.0.6",
-    "three": "^0.164.1"
+    "three": "^0.164.1",
+    "@pixiv/three-vrm": "^3.0.0",
+    "@pixiv/three-vrm-animation": "^3.0.0"
   }
 }

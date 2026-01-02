@@ -1,5 +1,6 @@
+import type { VRMAnimation } from "@pixiv/three-vrm-animation";
 import TWEEN, { type Tween } from "@tweenjs/tween.js";
-import type * as THREE from "three";
+import * as THREE from "three";
 import AmbientLight from "./libs/AmbientLight";
 import Audio from "./libs/Audio";
 import AudioListener from "./libs/AudioListener";
@@ -30,9 +31,15 @@ import Scene from "./libs/Scene";
 import Sky from "./libs/Sky";
 import Sphere from "./libs/Sphere";
 import Sprite from "./libs/Sprite";
+import VRMAvatar from "./libs/VRMAvatar";
 import Vec2 from "./libs/Vec2";
 import Vec3 from "./libs/Vec3";
 import Water from "./libs/Water";
+
+const VRM_FILE_PATHS = {
+	model: "./model/void.vrm",
+	animation: "./model/sample.vrma",
+} as const;
 
 export default class Game {
 	clock!: Clock;
@@ -77,6 +84,8 @@ export default class Game {
 	timeNextSpawn = 0;
 	prevPressC = false;
 	jumbTime = 0;
+	vrmAvatar?: VRMAvatar;
+	vrmAnimations: VRMAnimation[] = [];
 
 	init = async () => {
 		// アニメーションとかで使う時間用
@@ -278,6 +287,8 @@ export default class Game {
 		this.objectTimePeriod = 3;
 		this.timeNextSpawn = this.objectTimePeriod;
 
+		await this.setupVRMAvatar();
+
 		requestAnimationFrame(this.loop);
 	};
 
@@ -384,6 +395,7 @@ export default class Game {
 
 		TWEEN.update(frame); // TWEENオブジェクト更新
 		this.model.mixer?.update(delta); // モデルアニメーション更新
+		this.vrmAvatar?.update(delta);
 
 		// 動的にオブジェクトを生成する
 		if (this.dynamicObjects.length < 5 && time > this.timeNextSpawn) {
@@ -554,5 +566,33 @@ export default class Game {
 		this.renderer.render(this.scene, this.selectCamera);
 		this.renderer.clearDepth();
 		this.renderer.render(this.sceneOrtho, this.cameraOrtho);
+	};
+
+	setupVRMAvatar = async () => {
+		try {
+			const vrm = await this.loader.loadVRM(VRM_FILE_PATHS.model);
+			const scale = 15; // 好きな倍率
+			const scaleMatrix = new THREE.Matrix4().makeScale(scale, scale, scale);
+			vrm.scene.applyMatrix4(scaleMatrix);
+			vrm.scene.updateMatrixWorld(true);
+			if (!this.vrmAvatar) {
+				this.vrmAvatar = new VRMAvatar(this.scene);
+			}
+			this.vrmAvatar.setVRM(vrm);
+		} catch (error) {
+			console.warn("VRMの読み込みに失敗しました", error);
+			return;
+		}
+
+		try {
+			this.vrmAnimations = await this.loader.loadVRMAnimation(
+				VRM_FILE_PATHS.animation,
+			);
+			if (this.vrmAnimations.length > 0) {
+				this.vrmAvatar?.play(this.vrmAnimations[0]);
+			}
+		} catch (error) {
+			console.warn("VRMAの読み込みに失敗しました", error);
+		}
 	};
 }
