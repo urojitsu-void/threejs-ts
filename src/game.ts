@@ -284,8 +284,8 @@ export default class Game {
 
 		try {
 			const vrm = await this.loader.loadVRM("./model/void.vrm");
-			this.vrmAvatar.dispose();
 			this.vrmAvatar = new VRMAvatar(vrm);
+			this.vrmAvatar.dispose();
 			this.vrmAvatar.init(new Vec3(0, 20, 0), 0, 15);
 			this.vrmAvatar.getCenter();
 			this.physicsWorld.addHumanBody(

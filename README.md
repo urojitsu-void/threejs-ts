@@ -5,20 +5,19 @@ modern 3D game engine demo example powered by ThreeJS.
 - threejs
 - ammojs
 - typescript
-- bun
+- pnpm
 - vite
 - biome
 
 run locally
 
 ```
-$ bun dev
+$ pnpm dev
 ```
 
 production build
 
 ```
-$ bun production
-$ bun preview
+$ pnpm production
+$ pnpm preview
 ```
-
