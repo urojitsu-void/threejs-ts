@@ -1,6 +1,6 @@
 import type { VRMAnimation } from "@pixiv/three-vrm-animation";
 import TWEEN, { type Tween } from "@tweenjs/tween.js";
-import * as THREE from "three";
+import type * as THREE from "three";
 import AmbientLight from "./libs/AmbientLight";
 import Audio from "./libs/Audio";
 import AudioListener from "./libs/AudioListener";
@@ -35,11 +35,6 @@ import VRMAvatar from "./libs/VRMAvatar";
 import Vec2 from "./libs/Vec2";
 import Vec3 from "./libs/Vec3";
 import Water from "./libs/Water";
-
-const VRM_FILE_PATHS = {
-	model: "./model/void.vrm",
-	animation: "./model/sample.vrma",
-} as const;
 
 export default class Game {
 	clock!: Clock;
@@ -84,7 +79,7 @@ export default class Game {
 	timeNextSpawn = 0;
 	prevPressC = false;
 	jumbTime = 0;
-	vrmAvatar?: VRMAvatar;
+	vrmAvatar!: VRMAvatar;
 	vrmAnimations: VRMAnimation[] = [];
 
 	init = async () => {
@@ -287,7 +282,33 @@ export default class Game {
 		this.objectTimePeriod = 3;
 		this.timeNextSpawn = this.objectTimePeriod;
 
-		await this.setupVRMAvatar();
+		try {
+			const vrm = await this.loader.loadVRM("./model/void.vrm");
+			this.vrmAvatar.dispose();
+			this.vrmAvatar = new VRMAvatar(vrm);
+			this.vrmAvatar.init(new Vec3(0, 20, 0), 0, 15);
+			this.vrmAvatar.getCenter();
+			this.physicsWorld.addHumanBody(
+				this.vrmAvatar.object,
+				this.vrmAvatar.size,
+				0.5,
+			);
+			this.scene.add(this.vrmAvatar.object);
+		} catch (error) {
+			console.warn("VRMの読み込みに失敗しました", error);
+			return;
+		}
+
+		try {
+			this.vrmAnimations = await this.loader.loadVRMAnimation(
+				"./model/sample.vrma",
+			);
+			if (this.vrmAnimations.length > 0) {
+				this.vrmAvatar?.play(this.vrmAnimations[0]);
+			}
+		} catch (error) {
+			console.warn("VRMAの読み込みに失敗しました", error);
+		}
 
 		requestAnimationFrame(this.loop);
 	};
@@ -519,6 +540,7 @@ export default class Game {
 		}
 		// 移動結果を物理計算空間に反映
 		this.physicsWorld.setPhysicsPose(this.model.object);
+		this.physicsWorld.setPhysicsPose(this.vrmAvatar.object);
 
 		const delay = 3;
 		if (
@@ -560,39 +582,12 @@ export default class Game {
 		this.water.update();
 
 		this.physicsWorld.setModelPose(this.model.object);
+		this.physicsWorld.setModelPose(this.vrmAvatar.object);
 		this.controlCamera.controls?.update();
 		this.renderer.setClearColor(0x000000, 0);
 		this.renderer.clear(true, true, true);
 		this.renderer.render(this.scene, this.selectCamera);
 		this.renderer.clearDepth();
 		this.renderer.render(this.sceneOrtho, this.cameraOrtho);
-	};
-
-	setupVRMAvatar = async () => {
-		try {
-			const vrm = await this.loader.loadVRM(VRM_FILE_PATHS.model);
-			const scale = 15; // 好きな倍率
-			const scaleMatrix = new THREE.Matrix4().makeScale(scale, scale, scale);
-			vrm.scene.applyMatrix4(scaleMatrix);
-			vrm.scene.updateMatrixWorld(true);
-			if (!this.vrmAvatar) {
-				this.vrmAvatar = new VRMAvatar(this.scene);
-			}
-			this.vrmAvatar.setVRM(vrm);
-		} catch (error) {
-			console.warn("VRMの読み込みに失敗しました", error);
-			return;
-		}
-
-		try {
-			this.vrmAnimations = await this.loader.loadVRMAnimation(
-				VRM_FILE_PATHS.animation,
-			);
-			if (this.vrmAnimations.length > 0) {
-				this.vrmAvatar?.play(this.vrmAnimations[0]);
-			}
-		} catch (error) {
-			console.warn("VRMAの読み込みに失敗しました", error);
-		}
 	};
 }
